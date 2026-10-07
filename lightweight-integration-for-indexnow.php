@@ -1,9 +1,11 @@
 <?php
 /**
  * Plugin Name: Lightweight Integration for IndexNow
- * Plugin URI:  https://wordpress.org/plugins/lightweight-integration-for-indexnow
+ * Plugin URI:  https://github.com/SirDarcanos/lightweight-integration-for-indexnow
  * Description: Sends IndexNow pings on publish, update, and trash for posts, pages, and products (WooCommerce).
  * Version:     1.0.0
+ * Requires at least: 6.0
+ * Requires PHP: 7.4
  * Author:      Nicola Mustone
  * Author URI:  https://buthonestly.io
  * License:     GPL-2.0+
@@ -259,6 +261,11 @@ function nm_indexnow_submit_urls( array $urls ) {
 
 	$urls = array_values( array_unique( array_filter( $urls ) ) );
 	if ( empty( $urls ) ) {
+		return;
+	}
+
+	$host = wp_parse_url( home_url(), PHP_URL_HOST );
+	if ( ! $host ) {
 		return;
 	}
 
@@ -572,7 +579,7 @@ function nm_indexnow_is_localhost() {
 		return false;
 	}
 
-	$host = strtolower( $host );
+	$host = strtolower( trim( $host, '[]' ) );
 
 	// Classic localhost values.
 	if ( $host === 'localhost' || $host === '127.0.0.1' || $host === '::1' ) {

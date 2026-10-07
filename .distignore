@@ -4,6 +4,25 @@
 /.pi
 /dist
 /tests
+/scripts
+/docs
+/node_modules
+/vendor
+/.wp-env
+/.wp-env.json
+/.wp-env.tests.json
+/.wp-env.minimum.json
+/.wp-env*.override.json
+/.env
+/.env.*
+/package.json
+/package-lock.json
+/README.md
+/coverage
+/test-results
+/.phpunit.cache
+/.phpunit.result.cache
+/npm-debug.log*
 
 .distignore
 .gitattributes

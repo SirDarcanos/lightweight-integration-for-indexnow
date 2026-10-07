@@ -1,0 +1,30 @@
+{
+  "name": "lightweight-integration-for-indexnow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local WordPress development and plugin verification tooling.",
+  "scripts": {
+    "env:start": "npm run test:package && node scripts/wp-env.cjs start && node scripts/wp-env.cjs --config .wp-env.tests.json start",
+    "env:stop": "node scripts/wp-env.cjs stop && node scripts/wp-env.cjs --config .wp-env.tests.json stop",
+    "env:status": "node scripts/wp-env.cjs status && node scripts/wp-env.cjs --config .wp-env.tests.json status",
+    "env:cli": "node scripts/wp-env.cjs run cli wp",
+    "env:test:cli": "node scripts/wp-env.cjs --config .wp-env.tests.json run cli wp",
+    "test:integration": "npm run test:package && node scripts/wp-env.cjs --config .wp-env.tests.json run cli wp eval-file wp-content/indexnow-tests/integration.php",
+    "test:plugin-check": "npm run test:package && node scripts/check-plugin.mjs",
+    "test:package": "node scripts/check-package.mjs",
+    "test:minimum": "node scripts/wp-env.cjs --config .wp-env.minimum.json start && node scripts/wp-env.cjs --config .wp-env.minimum.json run cli wp eval-file wp-content/plugins/lightweight-integration-for-indexnow/tests/integration.php",
+    "env:minimum:stop": "node scripts/wp-env.cjs --config .wp-env.minimum.json stop",
+    "test": "npm run test:package && npm run test:integration && npm run test:plugin-check"
+  },
+  "devDependencies": {
+    "@wordpress/env": "11.16.0"
+  },
+  "overrides": {
+    "simple-git": "4.0.2",
+    "js-yaml": "4.3.2",
+    "qs": "6.16.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

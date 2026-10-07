@@ -1,2 +1,14 @@
 .DS_Store
 /dist/
+/node_modules/
+/.pi/
+/vendor/
+/.wp-env*.override.json
+/.wp-env/
+/.env
+/.env.*
+/npm-debug.log*
+/.phpunit.result.cache
+/.phpunit.cache/
+/coverage/
+/test-results/
