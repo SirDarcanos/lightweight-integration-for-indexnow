@@ -1,0 +1,195 @@
+name: Deploy to WordPress.org SVN
+
+# Deployment is opt-in: pushes, tags and GitHub releases do not trigger it.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Prepare deployment without committing to SVN (select a version tag)
+        type: boolean
+        default: true
+        required: true
+
+permissions:
+  contents: read
+
+# Never cancel a deployment while an SVN commit may be in progress.
+concurrency:
+  group: wordpress-org-svn
+  cancel-in-progress: false
+
+env:
+  SLUG: lightweight-integration-for-indexnow
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.version.outputs.commit }}
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate release version
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          tag = os.environ['TAG']
+          if os.environ['REF_TYPE'] != 'tag' or not re.fullmatch(r'v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)', tag):
+              raise SystemExit('Select a release tag such as 1.0.0 or v1.0.0, not a branch.')
+          version = tag.removeprefix('v')
+          slug = os.environ['SLUG']
+          plugin = Path(f'{slug}.php').read_text()
+          readme = Path('readme.txt').read_text()
+          for text, pattern, expected in (
+              (plugin, r'^\s*\* Version:\s*(\S+)', version),
+              (readme, r'^Stable tag:\s*(\S+)', version),
+              (plugin, r'^\s*\* Text Domain:\s*(\S+)', slug),
+          ):
+              match = re.search(pattern, text, re.MULTILINE)
+              if not match or match.group(1) != expected:
+                  raise SystemExit(f'Release metadata must match {expected}: {pattern}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'version={version}\n')
+          PY
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Require release commit to be on main
+        run: git merge-base --is-ancestor HEAD origin/main
+
+      - name: Check PHP syntax
+        run: |
+          php -l "$SLUG.php"
+          php -l index.php
+
+      - name: Require approved SVN repository and unused version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from urllib.error import HTTPError
+          from urllib.request import urlopen
+
+          base = f"https://plugins.svn.wordpress.org/{os.environ['SLUG']}/"
+          try:
+              with urlopen(base, timeout=30) as response:
+                  if response.status != 200:
+                      raise SystemExit('SVN repository is not available.')
+          except HTTPError as error:
+              raise SystemExit(f'SVN repository unavailable ({error.code}); WordPress.org approval is required.')
+          try:
+              with urlopen(base + 'tags/' + os.environ['VERSION'] + '/', timeout=30):
+                  raise SystemExit('This SVN version already exists; release a new version instead of overwriting it.')
+          except HTTPError as error:
+              if error.code != 404:
+                  raise
+          PY
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Configure required reviewers and tag restrictions in GitHub Settings.
+    environment: wordpress-org
+    permissions:
+      contents: read
+    steps:
+      - name: Check out validated commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          persist-credentials: false
+
+      - name: Check 1Password configuration
+        if: ${{ !inputs.dry_run }}
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          test -n "$OP_SERVICE_ACCOUNT_TOKEN" || { echo 'Missing OP_SERVICE_ACCOUNT_TOKEN secret'; exit 1; }
+          test -n "$OP_ENVIRONMENT_ID" || { echo 'Missing OP_ENVIRONMENT_ID variable'; exit 1; }
+
+      - name: Install 1Password SDK
+        if: ${{ !inputs.dry_run }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/onepassword-sdk"
+          "$RUNNER_TEMP/onepassword-sdk/bin/python" -m pip install --disable-pip-version-check 'onepassword-sdk==0.4.1'
+
+      - name: Load SVN credentials from 1Password Environment
+        id: onepassword
+        if: ${{ !inputs.dry_run }}
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
+        run: |
+          "$RUNNER_TEMP/onepassword-sdk/bin/python" - <<'PY'
+          import asyncio
+          import os
+          from onepassword import Client
+
+          async def load_credentials():
+              client = await Client.authenticate(
+                  auth=os.environ['OP_SERVICE_ACCOUNT_TOKEN'],
+                  integration_name='WordPress.org SVN GitHub Actions',
+                  integration_version='1.0.0',
+              )
+              response = await client.environments.get_variables(os.environ['OP_ENVIRONMENT_ID'])
+              return {variable.name: variable.value for variable in response.variables
+                      if variable.name in ('SVN_USERNAME', 'SVN_PASSWORD')}
+
+          try:
+              credentials = asyncio.run(asyncio.wait_for(load_credentials(), timeout=60))
+          except Exception:
+              # Do not log SDK exception payloads that could contain secrets.
+              raise SystemExit('Unable to read 1Password Environment; check token, Environment ID and read permissions.') from None
+
+          for name in ('SVN_USERNAME', 'SVN_PASSWORD'):
+              value = credentials.get(name, '')
+              if not value:
+                  raise SystemExit(f'Missing {name} in 1Password Environment.')
+              # Escape workflow-command data before registering log masking.
+              masked = value.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::add-mask::{masked}', flush=True)
+              if any(character in value for character in ('\r', '\n', '\0')):
+                  raise SystemExit(f'{name} must be a single-line value without NUL characters.')
+
+          # Export only the two credentials, not the whole Environment or token.
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for name in ('SVN_USERNAME', 'SVN_PASSWORD'):
+                  output.write(f'{name}={credentials[name]}\n')
+          PY
+
+      - name: Check SVN credentials are present
+        if: ${{ !inputs.dry_run }}
+        env:
+          SVN_USERNAME: ${{ steps.onepassword.outputs.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ steps.onepassword.outputs.SVN_PASSWORD }}
+        run: |
+          test -n "$SVN_USERNAME" || { echo 'Missing SVN_USERNAME in 1Password Environment'; exit 1; }
+          test -n "$SVN_PASSWORD" || { echo 'Missing SVN_PASSWORD in 1Password Environment'; exit 1; }
+
+      - name: Deploy plugin and directory assets
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
+        with:
+          dry-run: ${{ inputs.dry_run }}
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          ASSETS_DIR: .wordpress-org
+          # 10up 2.3.0 requires nonempty credentials even for a dry run.
+          # These placeholders are never used for an authenticated commit.
+          SVN_USERNAME: ${{ inputs.dry_run && 'dry-run' || steps.onepassword.outputs.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ inputs.dry_run && 'dry-run' || steps.onepassword.outputs.SVN_PASSWORD }}
