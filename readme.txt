@@ -2,7 +2,7 @@
 Contributors: nicolamustone
 Tags: indexnow, seo, bing, indexing, performance
 Requires at least: 6.0
-Tested up to: 6.9
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 1.0.0
 License: GPLv2 or later
@@ -29,6 +29,16 @@ Out of the box, it:
 * Optionally includes your key file URL (`https://example.com/YOUR_KEY.txt`) if you check the “key file” box in Settings.
 * Skips all pings on `localhost`, `127.0.0.1`, and `::1`.
 * Shows an admin notice (for admins) if an IndexNow request fails.
+
+### External service and data sharing
+
+This plugin connects to the IndexNow service at https://api.indexnow.org/indexnow to notify participating search engines about changed content. Activating the plugin enables automatic submissions when supported content is published, updated, or trashed; activation itself does not make a request.
+
+Each submission sends your site's hostname, your IndexNow API key, the content permalink, and related taxonomy archive URLs. If the key-file checkbox is enabled, it also sends your key-file URL. The plugin does not send post bodies, user accounts, or visitor analytics. To stop submissions, clear the API key or deactivate the plugin.
+
+IndexNow may share submitted URLs with participating search engines. See https://www.indexnow.org/ and the service terms at https://www.indexnow.org/terms before enabling this integration.
+
+The plugin generates an API key but does not create or serve its verification file. Upload `YOUR_KEY.txt`, containing only your API key, to your site's public root so IndexNow can verify ownership. The key-file checkbox controls whether its URL is explicitly included in requests.
 
 ### Developer hooks
 
@@ -78,10 +88,9 @@ You can extend or customize the behavior with the following filters and actions:
 
 1. Upload the `lightweight-integration-for-indexnow` folder to `/wp-content/plugins/` or install the plugin ZIP via the Plugins screen.
 2. Activate the plugin through the “Plugins” menu in WordPress.
-3. That’s it. The plugin will automatically send IndexNow pings when you publish, update, or trash supported content.
-4. Optionally, go to **Settings → General → IndexNow**:
-   * An API key is already generated for you. You can keep it or replace it with your own.
-   * (Optional) Tick “IndexNow Key File” if you have uploaded `YOUR_KEY.txt` containing only your key to your site root.
+3. Go to **Settings → General → IndexNow** and keep the generated API key or replace it with your own.
+4. Upload `YOUR_KEY.txt`, containing only that key, to your site's public root for ownership verification. Tick “IndexNow Key File” to explicitly include the file URL in requests.
+5. The plugin sends IndexNow pings when you publish, update, or trash supported content.
 
 == Frequently Asked Questions ==
 
@@ -92,18 +101,15 @@ Because it is **super lightweight**:
 * It has literally **two options** which are also optional.
 * It adds **no JavaScript** and **no CSS** to your site.
 * It does **not** output anything on the front end.
-* It **works immediately** after activation. No configuration is required unless you want to change the key or use a key file.
+* It generates an API key on activation. You only need to host the verification file and optionally change the key.
 
 If you like small, transparent plugins that do exactly one thing, this is for you.
 
 = Do I have to configure anything before it works? =
 
-No. On activation, the plugin generates an IndexNow-compatible API key and uses it automatically.
+On activation, the plugin generates an IndexNow-compatible API key and uses it for submissions. IndexNow still needs to verify that key at `https://example.com/YOUR_KEY.txt`; the plugin does not create or serve this file.
 
-You only need to:
-
-* Replace the key if you prefer to use your own.
-* Optionally tick the key file checkbox if you have created `YOUR_KEY.txt` in your site root.
+Upload a file containing only your key to your site's public root. You can replace the generated key with your own, and tick the key-file checkbox to explicitly send the verification file URL.
 
 = Which content types are pinged by default? =
 
@@ -141,6 +147,12 @@ This avoids pointless external requests on local environments.
 1. IndexNow settings in Settings → General.
 
 == Changelog ==
+
+= Unreleased =
+
+* Fix the hostname sent in IndexNow requests and skip IPv6 localhost correctly.
+* Declare minimum WordPress and PHP versions in the plugin header.
+* Document IndexNow data sharing and the required verification file.
 
 = 1.0.0 =
 
