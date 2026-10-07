@@ -20,6 +20,7 @@
 /package.json export-ignore
 /package-lock.json export-ignore
 /README.md export-ignore
+/AGENTS.md export-ignore
 /coverage export-ignore
 /test-results export-ignore
 /.phpunit.cache export-ignore
