@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name: Lightweight Integration for IndexNow
- * Plugin URI:  https://github.com/SirDarcanos/lightweight-integration-for-indexnow
+ * Plugin URI:  https://wordpress.org/plugins/lightweight-integration-for-indexnow/
  * Description: Sends IndexNow pings on publish, update, and trash for posts, pages, and products (WooCommerce).
  * Version:     1.0.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author:      Nicola Mustone
- * Author URI:  https://buthonestly.io
+ * Author URI:  https://nicolamustone.com
  * License:     GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain: lightweight-integration-for-indexnow

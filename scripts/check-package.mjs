@@ -16,7 +16,7 @@ const attributes = readFileSync(join(root, '.gitattributes'), 'utf8');
 // Guard the distribution and Git archive paths against accidental dev-file leaks.
 for (const path of ['.git', '.github', '.pi', '.wordpress-org', 'dist', 'tests', 'scripts', 'docs',
   'node_modules', 'vendor', '.wp-env.json', '.wp-env.tests.json', '.wp-env.minimum.json', '.wp-env.override.json', '.wp-env.tests.override.json', '.wp-env.minimum.override.json', '.env', '.env.local',
-  'package.json', 'package-lock.json', 'README.md', 'coverage', 'test-results']) {
+  'package.json', 'package-lock.json', 'README.md', 'AGENTS.md', 'coverage', 'test-results']) {
   assert(excluded(path), `${path} must be excluded by .distignore`);
   if (path !== '.git') {
     const attrRules = attributes.split(/\r?\n/).filter((line) => line.endsWith(' export-ignore'))
