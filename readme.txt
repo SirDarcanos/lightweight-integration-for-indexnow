@@ -1,4 +1,4 @@
-=== IndexNow Integration ===
+=== Lightweight Integration for IndexNow ===
 Contributors: nicolamustone
 Tags: indexnow, seo, bing, indexing, performance
 Requires at least: 6.0
@@ -11,6 +11,8 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 A tiny, no-bloat IndexNow integration for WordPress.
 
 == Description ==
+
+Lightweight Integration for IndexNow is an independent plugin by Nicola Mustone. It is not affiliated with or endorsed by IndexNow or its participating search engines.
 
 This plugin automatically sends IndexNow pings whenever relevant content is published, updated, or moved to the trash. It is intentionally minimal:
 
@@ -74,7 +76,7 @@ You can extend or customize the behavior with the following filters and actions:
 
 == Installation ==
 
-1. Upload the plugin folder to `/wp-content/plugins/` or install it via the Plugins screen.
+1. Upload the `lightweight-integration-for-indexnow` folder to `/wp-content/plugins/` or install the plugin ZIP via the Plugins screen.
 2. Activate the plugin through the “Plugins” menu in WordPress.
 3. That’s it. The plugin will automatically send IndexNow pings when you publish, update, or trash supported content.
 4. Optionally, go to **Settings → General → IndexNow**:
@@ -142,7 +144,7 @@ This avoids pointless external requests on local environments.
 
 = 1.0.0 =
 
-* Initial release.
+* Initial release as Lightweight Integration for IndexNow.
 * Auto-generated IndexNow API key on activation.
 * Pings on publish/update/trash for posts, pages, and WooCommerce products.
 * Optional key file support via simple checkbox.
